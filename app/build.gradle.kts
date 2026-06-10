@@ -1,6 +1,12 @@
+import java.util.Properties
+
 plugins {
     alias(libs.plugins.android.application)
 }
+
+val localProperties = Properties()
+localProperties.load(project.rootProject.file("local.properties").inputStream())
+val apiKey = localProperties.getProperty("NEWS_API_KEY")
 
 android {
     namespace = "com.example.news"
@@ -14,6 +20,7 @@ android {
         versionName = "1.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+        buildConfigField("String", "API_KEY", "\"$apiKey\"")
     }
 
     buildTypes {
@@ -31,6 +38,9 @@ android {
     }
     buildFeatures{
         viewBinding = true
+    }
+    buildFeatures {
+        buildConfig = true
     }
 }
 
