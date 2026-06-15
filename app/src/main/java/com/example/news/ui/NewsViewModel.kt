@@ -13,8 +13,14 @@ class NewsViewModel(val newsRepository: NewsRepository): ViewModel() {
     val topHeadlines: MutableLiveData<Response<NewsResponse>> = MutableLiveData()
 
     fun getTopHeadlines(countryCode: String, apiKey: String) = viewModelScope.launch {
-        val response = newsRepository.getTopHeadlines(countryCode, 1, apiKey)
-        topHeadlines.postValue(response)
+        android.util.Log.d("MyLog", "ViewModel: Запрос начат...")
+        try {
+            val response = newsRepository.getTopHeadlines(countryCode, 1, apiKey)
+            topHeadlines.postValue(response)
+            android.util.Log.d("MyLog", "ViewModel: Ответ получен!")
+        } catch (e: Exception) {
+            android.util.Log.e("MyLog", "ViewModel: Ошибка: ${e.message}")
+        }
     }
 
 }

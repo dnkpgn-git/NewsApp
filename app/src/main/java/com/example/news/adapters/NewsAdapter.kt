@@ -29,7 +29,7 @@ class NewsAdapter(private val articleList: List<Article>): RecyclerView.Adapter<
         holder.binding.apply {
             tvTitle.text = article.title
             tvDescription.text = article.description
-            tvSource.text = article.source.toString()
+            tvSource.text = article.source?.name ?: "Unknown Source"
             tvPublishedAt.text = article.publishedAt
             Glide.with(holder.itemView.context)
                 .load(article.urlToImage)
