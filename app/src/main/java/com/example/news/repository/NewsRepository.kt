@@ -6,4 +6,7 @@ import java.util.Locale
 class NewsRepository {
     suspend fun getTopHeadlines(countryCode: String, pageNumber: Int, apiKey: String) =
         RetrofitInstance.api.getTopHeadLines(countryCode, pageNumber, apiKey)
+
+    suspend fun searchForNews(searchQuery: String, pageNumber: Int, apiKey: String) =
+        RetrofitInstance.api.searchForNews(searchQuery, pageNumber, apiKey)
 }

@@ -12,6 +12,9 @@ import com.example.news.databinding.ActivityMainBinding
 import com.example.news.repository.NewsRepository
 import com.example.news.ui.NewsViewModel
 import com.example.news.ui.NewsViewModelProviderFactory
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.MainScope
+import kotlinx.coroutines.launch
 
 class MainActivity : AppCompatActivity() {
 
@@ -30,6 +33,7 @@ class MainActivity : AppCompatActivity() {
 
         setupRecyclerView()
 
+        //"Горячие" новости
         viewModel.topHeadlines.observe(this){response ->
             android.util.Log.d("MyLog", "Response status: ${response.code()}")
             if(response.isSuccessful){
@@ -44,6 +48,39 @@ class MainActivity : AppCompatActivity() {
         }
 
         viewModel.getTopHeadlines("us", BuildConfig.API_KEY)
+
+        //Слушатель поля поиска
+        var job: Job? = null
+        binding.svSearchNews.setOnQueryTextListener(object : android.widget.SearchView.OnQueryTextListener{
+            override fun onQueryTextSubmit(query: String?): Boolean {
+                return false
+            }
+
+            override fun onQueryTextChange(newText: String?): Boolean {
+                job?.cancel()
+                job = MainScope().launch {
+                    kotlinx.coroutines.delay(500L)
+                    newText?.let {
+                        if (it.isNotEmpty()){
+                            viewModel.searchNews(it, BuildConfig.API_KEY)
+                        } else{
+                            viewModel.topHeadlines.value?.body()?.let { newsResponse ->
+                                newsAdapter = NewsAdapter(newsResponse.articles)
+                                binding.rvArticle.adapter = newsAdapter
+                            }
+                        }
+                    }
+                }
+                return true
+            }
+        })
+
+        viewModel.searchNews.observe(this){response ->
+            response?.body()?.let { newsResponse ->
+                newsAdapter = NewsAdapter(newsResponse.articles)
+                binding.rvArticle.adapter = newsAdapter
+            }
+        }
 
     }
 
