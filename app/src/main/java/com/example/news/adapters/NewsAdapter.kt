@@ -2,14 +2,34 @@ package com.example.news.adapters
 
 import android.view.LayoutInflater
 import android.view.ViewGroup
+import androidx.recyclerview.widget.AsyncListDiffer
+import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.RecyclerView
 import androidx.viewbinding.ViewBinding
 import com.example.news.databinding.ItemArticleBinding
 import com.example.news.models.Article
 import com.bumptech.glide.Glide
 
-class NewsAdapter(private val articleList: List<Article>): RecyclerView.Adapter<NewsAdapter.NewsViewHolder>() {
+class NewsAdapter: RecyclerView.Adapter<NewsAdapter.NewsViewHolder>() {
     class NewsViewHolder(val binding: ItemArticleBinding): RecyclerView.ViewHolder(binding.root)
+
+    private val differCallback = object : DiffUtil.ItemCallback<Article>() {
+        override fun areItemsTheSame(
+            oldItem: Article,
+            newItem: Article
+        ): Boolean {
+            return oldItem.url == newItem.url
+        }
+
+        override fun areContentsTheSame(
+            oldItem: Article,
+            newItem: Article
+        ): Boolean {
+            return oldItem == newItem
+        }
+    }
+
+    val differ = AsyncListDiffer(this, differCallback)
 
     override fun onCreateViewHolder(
         parent: ViewGroup,
@@ -24,7 +44,7 @@ class NewsAdapter(private val articleList: List<Article>): RecyclerView.Adapter<
         holder: NewsViewHolder,
         position: Int
     ) {
-        val article = articleList[position]
+        val article = differ.currentList[position]
 
         holder.binding.apply {
             tvTitle.text = article.title
@@ -40,6 +60,6 @@ class NewsAdapter(private val articleList: List<Article>): RecyclerView.Adapter<
     }
 
     override fun getItemCount(): Int {
-        return articleList.size
+        return differ.currentList.size
     }
 }

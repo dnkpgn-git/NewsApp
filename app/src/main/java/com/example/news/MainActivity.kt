@@ -7,6 +7,7 @@ import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.lifecycle.ViewModelProvider
 import androidx.recyclerview.widget.LinearLayoutManager
+import androidx.recyclerview.widget.RecyclerView
 import com.example.news.adapters.NewsAdapter
 import com.example.news.databinding.ActivityMainBinding
 import com.example.news.repository.NewsRepository
@@ -31,6 +32,9 @@ class MainActivity : AppCompatActivity() {
         val factory = NewsViewModelProviderFactory(repository)
         viewModel = ViewModelProvider(this, factory)[NewsViewModel::class.java]
 
+        newsAdapter = NewsAdapter()
+        binding.rvArticle.adapter = newsAdapter
+
         setupRecyclerView()
 
         //"Горячие" новости
@@ -38,8 +42,7 @@ class MainActivity : AppCompatActivity() {
             android.util.Log.d("MyLog", "Response status: ${response.code()}")
             if(response.isSuccessful){
                 response.body()?.let { newsResponse ->
-                    newsAdapter = NewsAdapter(newsResponse.articles)
-                    binding.rvArticle.adapter = newsAdapter
+                    newsAdapter.differ.submitList(newsResponse.articles.toList())
                 }
             }
             else {
@@ -65,8 +68,7 @@ class MainActivity : AppCompatActivity() {
                             viewModel.searchNews(it, BuildConfig.API_KEY)
                         } else{
                             viewModel.topHeadlines.value?.body()?.let { newsResponse ->
-                                newsAdapter = NewsAdapter(newsResponse.articles)
-                                binding.rvArticle.adapter = newsAdapter
+                                newsAdapter.differ.submitList(newsResponse.articles.toList())
                             }
                         }
                     }
@@ -77,16 +79,37 @@ class MainActivity : AppCompatActivity() {
 
         viewModel.searchNews.observe(this){response ->
             response?.body()?.let { newsResponse ->
-                newsAdapter = NewsAdapter(newsResponse.articles)
-                binding.rvArticle.adapter = newsAdapter
+                newsAdapter.differ.submitList(newsResponse.articles.toList())
             }
         }
 
     }
 
+    val scrollListener = object : RecyclerView.OnScrollListener(){
+        override fun onScrolled(recyclerView: RecyclerView, dx: Int, dy: Int) {
+            super.onScrolled(recyclerView, dx, dy)
+            val layoutManager = recyclerView.layoutManager as LinearLayoutManager
+            val firstVisibleItemPosition = layoutManager.findFirstVisibleItemPosition()
+            val visibleItemCount = layoutManager.childCount
+            val totalItemCount = layoutManager.itemCount
+
+            val isAtLastItem = firstVisibleItemPosition + visibleItemCount >= totalItemCount
+            val isNotAtBeginning = firstVisibleItemPosition >= 0
+            val isTotalMoreThanVisible = totalItemCount >= 20 // 20 - размер страницы API
+
+            val shouldPaginate = isAtLastItem && isNotAtBeginning && isTotalMoreThanVisible && !viewModel.isLoading
+
+            if(shouldPaginate) {
+                android.util.Log.d("PaginationLog", "Загружаю страницу №${viewModel.topHeadlinesPage}")
+                viewModel.getTopHeadlines("us", BuildConfig.API_KEY)
+            }
+        }
+    }
+
     private fun setupRecyclerView(){
         binding.rvArticle.apply {
             layoutManager = LinearLayoutManager(this@MainActivity)
+            addOnScrollListener(scrollListener)
         }
     }
 }
