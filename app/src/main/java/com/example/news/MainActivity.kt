@@ -6,6 +6,7 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.lifecycle.ViewModelProvider
+import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.example.news.adapters.NewsAdapter
@@ -15,6 +16,7 @@ import com.example.news.ui.NewsViewModel
 import com.example.news.ui.NewsViewModelProviderFactory
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.MainScope
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 class MainActivity : AppCompatActivity() {
@@ -33,8 +35,6 @@ class MainActivity : AppCompatActivity() {
         viewModel = ViewModelProvider(this, factory)[NewsViewModel::class.java]
 
         newsAdapter = NewsAdapter()
-        binding.rvArticle.adapter = newsAdapter
-
         setupRecyclerView()
 
         //"Горячие" новости
@@ -61,8 +61,8 @@ class MainActivity : AppCompatActivity() {
 
             override fun onQueryTextChange(newText: String?): Boolean {
                 job?.cancel()
-                job = MainScope().launch {
-                    kotlinx.coroutines.delay(500L)
+                job = lifecycleScope.launch {
+                    delay(500L)
                     newText?.let {
                         if (it.isNotEmpty()){
                             viewModel.searchNews(it, BuildConfig.API_KEY)
@@ -76,11 +76,18 @@ class MainActivity : AppCompatActivity() {
                 return true
             }
         })
-
         viewModel.searchNews.observe(this){response ->
-            response?.body()?.let { newsResponse ->
-                newsAdapter.differ.submitList(newsResponse.articles.toList())
+            if (response != null) {
+                if (response.isSuccessful) {
+                    response?.body()?.let { newsResponse ->
+                        android.util.Log.d("MyLog", "Найдено статей: ${newsResponse.articles.size} из ${newsResponse.totalResults}")
+                        newsAdapter.differ.submitList(newsResponse.articles.toList())
+                    }
+                } else {
+                    android.util.Log.e("MyLog", "Search Error: ${response.errorBody()?.string()}")
+                }
             }
+
         }
 
     }
@@ -95,19 +102,30 @@ class MainActivity : AppCompatActivity() {
 
             val isAtLastItem = firstVisibleItemPosition + visibleItemCount >= totalItemCount
             val isNotAtBeginning = firstVisibleItemPosition >= 0
-            val isTotalMoreThanVisible = totalItemCount >= 20 // 20 - размер страницы API
+            val isTotalMoreThanVisible = totalItemCount >= visibleItemCount
 
-            val shouldPaginate = isAtLastItem && isNotAtBeginning && isTotalMoreThanVisible && !viewModel.isLoading
+            val query = binding.svSearchNews.query.toString()
+            val isLastPage = if (query.isEmpty()) viewModel.isTopHeadlinesLastPage else viewModel.isSearchLastPage
+
+            val shouldPaginate = isAtLastItem && isNotAtBeginning && isTotalMoreThanVisible && !viewModel.isLoading && !isLastPage
 
             if(shouldPaginate) {
-                android.util.Log.d("PaginationLog", "Загружаю страницу №${viewModel.topHeadlinesPage}")
-                viewModel.getTopHeadlines("us", BuildConfig.API_KEY)
+                val query = binding.svSearchNews.query.toString() // Достаем текущий текст поиска
+
+                if (query.isEmpty()) {
+                    android.util.Log.d("PaginationLog", "Пагинация ГЛАВНОЙ, стр: ${viewModel.topHeadlinesPage}")
+                    viewModel.getTopHeadlines("us", BuildConfig.API_KEY)
+                } else {
+                    android.util.Log.d("PaginationLog", "Пагинация ПОИСКА, стр: ${viewModel.searchNewsPage}")
+                    viewModel.searchNews(query, BuildConfig.API_KEY)
+                }
             }
         }
     }
 
     private fun setupRecyclerView(){
         binding.rvArticle.apply {
+            adapter = newsAdapter
             layoutManager = LinearLayoutManager(this@MainActivity)
             addOnScrollListener(scrollListener)
         }
