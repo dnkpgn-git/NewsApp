@@ -70,4 +70,7 @@ dependencies {
     implementation("com.github.bumptech.glide:glide:4.16.0")
 
     implementation("com.squareup.okhttp3:logging-interceptor:4.11.0")
+
+    //Веб-представление
+    implementation("androidx.browser:browser:1.8.0")
 }

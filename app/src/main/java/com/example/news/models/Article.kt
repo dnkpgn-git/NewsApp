@@ -1,5 +1,7 @@
 package com.example.news.models
 
+import java.io.Serializable
+
 data class Article (
     val author: String?,
     val title: String?,

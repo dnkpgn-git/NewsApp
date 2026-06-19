@@ -90,6 +90,12 @@ class MainActivity : AppCompatActivity() {
 
         }
 
+        newsAdapter.setOnItemClickListener { article ->
+            val intent = android.content.Intent(this, ArticleActivity::class.java)
+            intent.putExtra("article_url", article.url)
+            startActivity(intent)
+        }
+
     }
 
     val scrollListener = object : RecyclerView.OnScrollListener(){
